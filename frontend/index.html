@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ClubHub</title>
+  <link rel="stylesheet" href="style.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- ╔══════════════════════════════════════╗
+     ║           LOGIN SCREEN               ║
+     ╚══════════════════════════════════════╝ -->
+<div id="loginScreen" class="auth-screen">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <div class="brand-dot"></div>
+      <span class="brand-name">ClubHub</span>
+    </div>
+    <p class="auth-sub">Welcome back! Sign in to continue.</p>
+    <div class="role-tabs">
+      <button class="role-tab active" data-role="user" onclick="selectRole('user',this)">Member</button>
+      <button class="role-tab" data-role="admin" onclick="selectRole('admin',this)">Admin</button>
+    </div>
+    <label class="field-label">Email</label>
+    <input class="field-input" type="email" id="loginEmail" placeholder="you@example.com" autocomplete="email"/>
+    <label class="field-label">Password</label>
+    <div class="pw-wrap">
+      <input class="field-input" type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password"/>
+      <button class="pw-toggle" type="button" onclick="togglePw('loginPassword',this)"><i class="fa-regular fa-eye"></i></button>
+    </div>
+    <div id="loginError" class="form-error"><i class="fa-solid fa-circle-exclamation"></i> <span id="loginErrMsg">Invalid email or password.</span></div>
+    <button class="btn-primary" onclick="handleLogin()"><i class="fa-solid fa-right-to-bracket"></i> Sign In</button>
+    <p class="auth-switch">Don't have an account? <a href="#" onclick="showRegister()">Register</a></p>
+  </div>
+</div>
+
+<!-- ╔══════════════════════════════════════╗
+     ║          REGISTER SCREEN             ║
+     ╚══════════════════════════════════════╝ -->
+<div id="registerScreen" class="auth-screen hidden">
+  <div class="auth-card auth-card-reg">
+    <div class="auth-brand">
+      <div class="brand-dot"></div>
+      <span class="brand-name">ClubHub</span>
+    </div>
+    <p class="auth-sub">Create your account to get started.</p>
+    <div class="name-row">
+      <div style="flex:1">
+        <label class="field-label">First Name</label>
+        <input class="field-input" type="text" id="regFirst" placeholder="Juan"/>
+      </div>
+      <div style="flex:1">
+        <label class="field-label">Last Name</label>
+        <input class="field-input" type="text" id="regLast" placeholder="dela Cruz"/>
+      </div>
+    </div>
+    <label class="field-label">Email</label>
+    <input class="field-input" type="email" id="regEmail" placeholder="juan@example.com"/>
+    <label class="field-label">Password</label>
+    <div class="pw-wrap">
+      <input class="field-input" type="password" id="regPassword" placeholder="Min. 6 characters"/>
+      <button class="pw-toggle" type="button" onclick="togglePw('regPassword',this)"><i class="fa-regular fa-eye"></i></button>
+    </div>
+    <label class="field-label">Re-enter Password</label>
+    <div class="pw-wrap">
+      <input class="field-input" type="password" id="regConfirm" placeholder="Repeat password"/>
+      <button class="pw-toggle" type="button" onclick="togglePw('regConfirm',this)"><i class="fa-regular fa-eye"></i></button>
+    </div>
+    <div id="regError" class="form-error"><i class="fa-solid fa-circle-exclamation"></i> <span id="regErrMsg">Please fill in all fields.</span></div>
+    <button class="btn-primary" onclick="handleRegister()"><i class="fa-solid fa-user-plus"></i> Register</button>
+    <p class="auth-switch">Already have an account? <a href="#" onclick="showLogin()">Sign in</a></p>
+  </div>
+</div>
+
+<!-- ╔══════════════════════════════════════╗
+     ║             APP SHELL                ║
+     ╚══════════════════════════════════════╝ -->
+<div id="appShell" class="app-shell hidden">
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <span class="sb-hex">⬡</span>
+      <span class="sb-title">ClubHub</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a class="nav-link active" onclick="showTab('dashboard',this)">
+        <i class="fa-solid fa-table-cells-large nav-ico"></i><span>Dashboard</span>
+      </a>
+      <a class="nav-link" onclick="showTab('requests',this)">
+        <i class="fa-regular fa-inbox nav-ico"></i><span>Requests</span>
+        <span class="nav-badge hidden" id="reqBadge">0</span>
+      </a>
+      <a class="nav-link" onclick="showTab('calendar',this)">
+        <i class="fa-regular fa-calendar nav-ico"></i><span>Calendar</span>
+      </a>
+      <a class="nav-link" onclick="showTab('reports',this)">
+        <i class="fa-solid fa-chart-line nav-ico"></i><span>Reports</span>
+      </a>
+      <a class="nav-link admin-only hidden" onclick="showTab('members',this)">
+        <i class="fa-solid fa-users nav-ico"></i><span>Members</span>
+      </a>
+      <a class="nav-link admin-only hidden" onclick="showTab('settings',this)">
+        <i class="fa-solid fa-gear nav-ico"></i><span>Settings</span>
+      </a>
+    </nav>
+    <div class="sidebar-user">
+      <div class="su-avatar" id="suAvatar">JD</div>
+      <div class="su-info">
+        <div class="su-name" id="suName">Jane Doe</div>
+        <div class="su-role" id="suRole">Member</div>
+      </div>
+      <button class="su-logout" onclick="handleLogout()" title="Logout">
+        <i class="fa-solid fa-right-from-bracket"></i>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ── MAIN ── -->
+  <div class="main">
+
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="hamburger" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
+        <h1 class="topbar-greeting" id="topGreeting">Good morning</h1>
+      </div>
+      <div class="topbar-right">
+        <button class="top-icon-btn member-only hidden" id="quickAddBtn" onclick="openEventModal()" title="Submit Request">
+          <i class="fa-solid fa-plus"></i>
+        </button>
+        <div class="notif-wrap" id="bellWrap">
+          <button class="top-icon-btn" id="bellBtn" onclick="toggleNotif()">
+            <i class="fa-regular fa-bell"></i>
+            <span class="nb-badge hidden" id="notifCount">0</span>
+          </button>
+          <div class="notif-drop hidden" id="notifDrop">
+            <div class="nd-title">Notifications</div>
+            <div id="notifList"><div class="nd-empty">No notifications</div></div>
+          </div>
+        </div>
+        <button class="top-icon-btn top-avatar-btn">
+          <span id="topAvatar" class="top-avatar-txt">?</span>
+        </button>
+        <div class="dot-wrap">
+          <button class="top-icon-btn" id="dotBtn" onclick="toggleDotMenu()">
+            <i class="fa-solid fa-ellipsis"></i>
+          </button>
+          <div class="dot-menu hidden" id="dotMenu">
+            <div class="dot-menu-head">Appearance</div>
+            <button class="dot-item" onclick="setTheme('dark');closeDotMenu()">
+              <i class="fa-solid fa-moon"></i> Dark Mode
+            </button>
+            <button class="dot-item" onclick="setTheme('light');closeDotMenu()">
+              <i class="fa-solid fa-sun"></i> Light Mode
+            </button>
+            <div class="dot-divider"></div>
+            <button class="dot-item" onclick="handleLogout()">
+              <i class="fa-solid fa-right-from-bracket"></i> Sign Out
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- CONTENT -->
+    <div class="content">
+
+      <!-- ═════ DASHBOARD ═════ -->
+      <section class="tab active" id="tab-dashboard">
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-icon" style="background:rgba(108,99,245,.15);color:#9b8ff8"><i class="fa-solid fa-layer-group"></i></div>
+            <div>
+              <div class="stat-lbl">Total Requests</div>
+              <div class="stat-num" id="statTotal">0</div>
+              <div class="stat-chg up"><i class="fa-solid fa-arrow-trend-up"></i> This month</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:rgba(245,166,35,.15);color:#f5a623"><i class="fa-solid fa-clock"></i></div>
+            <div>
+              <div class="stat-lbl">Pending</div>
+              <div class="stat-num" id="statPending">0</div>
+              <div class="stat-chg neutral"><i class="fa-solid fa-minus"></i> Awaiting review</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:rgba(62,207,114,.15);color:#3ecf72"><i class="fa-solid fa-circle-check"></i></div>
+            <div>
+              <div class="stat-lbl">Resolved</div>
+              <div class="stat-num" id="statResolved">0</div>
+              <div class="stat-chg up"><i class="fa-solid fa-arrow-trend-up"></i> Approved / Rejected</div>
+            </div>
+          </div>
+          <div class="stat-card admin-only hidden">
+            <div class="stat-icon" style="background:rgba(79,179,246,.15);color:#4fb3f6"><i class="fa-solid fa-users"></i></div>
+            <div>
+              <div class="stat-lbl">Total Members</div>
+              <div class="stat-num" id="statMembers">0</div>
+              <div class="stat-chg up"><i class="fa-solid fa-arrow-trend-up"></i> Registered</div>
+            </div>
+          </div>
+        </div>
+        <div class="section-lbl">Recent Activity</div>
+        <div class="act-list" id="recentActivity">
+          <div class="no-events">No activity yet.</div>
+        </div>
+      </section>
+
+      <!-- ═════ REQUESTS ═════ -->
+      <section class="tab hidden" id="tab-requests">
+        <div class="tab-top">
+          <div class="section-lbl" style="margin:0">
+            <span class="member-only hidden">My Requests</span>
+            <span class="admin-only hidden">All Requests</span>
+          </div>
+        </div>
+        <div class="filter-bar admin-only hidden">
+          <button class="ftab active" onclick="filterReqs('all',this)">All</button>
+          <button class="ftab" onclick="filterReqs('pending',this)">Pending</button>
+          <button class="ftab" onclick="filterReqs('approved',this)">Approved</button>
+          <button class="ftab" onclick="filterReqs('rejected',this)">Rejected</button>
+          <button class="ftab" onclick="filterReqs('revision',this)">Needs Revision</button>
+        </div>
+        <div class="filter-bar member-only hidden" id="memberFilterBar">
+          <button class="ftab active" onclick="filterReqs('all',this)">All</button>
+          <button class="ftab" onclick="filterReqs('pending',this)">Pending</button>
+          <button class="ftab" onclick="filterReqs('approved',this)">Approved</button>
+          <button class="ftab" onclick="filterReqs('rejected',this)">Rejected</button>
+          <button class="ftab" onclick="filterReqs('revision',this)">Needs Revision</button>
+        </div>
+        <div class="tbl-wrap">
+          <table class="tbl" id="reqTable">
+            <thead id="reqHead"></thead>
+            <tbody id="reqBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ═════ CALENDAR ═════ -->
+      <section class="tab hidden" id="tab-calendar">
+        <div class="cal-layout">
+          <div class="cal-card">
+            <div class="cal-header">
+              <button class="cal-nav" onclick="calNav(-1)"><i class="fa-solid fa-chevron-left"></i></button>
+              <span class="cal-month-lbl" id="calMonthLbl"></span>
+              <button class="cal-nav" onclick="calNav(1)"><i class="fa-solid fa-chevron-right"></i></button>
+            </div>
+            <div class="cal-weekdays">
+              <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span>
+              <span>Thu</span><span>Fri</span><span>Sat</span>
+            </div>
+            <div class="cal-grid" id="calGrid"></div>
+          </div>
+          <div class="cal-sidebar">
+            <div class="cal-sidebar-head">
+              <span class="section-lbl" id="calEvtTitle">Select a date</span>
+            </div>
+            <div id="calEvtList" class="act-list">
+              <div class="no-events">Click a date to view events.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═════ REPORTS ═════ -->
+      <section class="tab hidden" id="tab-reports">
+
+        <!-- Summary stat cards -->
+        <div class="rpt-summary-row" id="rptSummaryRow">
+          <div class="rpt-stat-card">
+            <div class="rpt-stat-icon" style="background:rgba(108,99,245,.15);color:#9b8ff8">
+              <i class="fa-solid fa-layer-group"></i>
+            </div>
+            <div class="rpt-stat-body">
+              <div class="rpt-stat-lbl">Total Requests</div>
+              <div class="rpt-stat-num" id="rptTotal">—</div>
+            </div>
+          </div>
+          <div class="rpt-stat-card">
+            <div class="rpt-stat-icon" style="background:rgba(62,207,114,.15);color:#3ecf72">
+              <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <div class="rpt-stat-body">
+              <div class="rpt-stat-lbl">Approved</div>
+              <div class="rpt-stat-num" id="rptApproved">—</div>
+            </div>
+          </div>
+          <div class="rpt-stat-card">
+            <div class="rpt-stat-icon" style="background:rgba(241,108,108,.15);color:#f16c6c">
+              <i class="fa-solid fa-circle-xmark"></i>
+            </div>
+            <div class="rpt-stat-body">
+              <div class="rpt-stat-lbl">Rejected</div>
+              <div class="rpt-stat-num" id="rptRejected">—</div>
+            </div>
+          </div>
+          <div class="rpt-stat-card">
+            <div class="rpt-stat-icon" style="background:rgba(245,166,35,.15);color:#f5a623">
+              <i class="fa-solid fa-clock"></i>
+            </div>
+            <div class="rpt-stat-body">
+              <div class="rpt-stat-lbl">Pending</div>
+              <div class="rpt-stat-num" id="rptPending">—</div>
+            </div>
+          </div>
+          <div class="rpt-stat-card">
+            <div class="rpt-stat-icon" style="background:rgba(45,212,191,.15);color:#2dd4bf">
+              <i class="fa-solid fa-percent"></i>
+            </div>
+            <div class="rpt-stat-body">
+              <div class="rpt-stat-lbl">Approval Rate</div>
+              <div class="rpt-stat-num" id="rptRate">—</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts row -->
+        <div class="rpt-charts-row">
+          <!-- Donut: Status Breakdown -->
+          <div class="rpt-chart-card">
+            <div class="rpt-chart-title">
+              <i class="fa-solid fa-chart-pie"></i> Request Status Breakdown
+            </div>
+            <div class="rpt-chart-wrap">
+              <canvas id="chartStatus"></canvas>
+            </div>
+          </div>
+
+          <!-- Bar: Requests per Month -->
+          <div class="rpt-chart-card">
+            <div class="rpt-chart-title">
+              <i class="fa-solid fa-chart-bar"></i> Requests Per Month
+            </div>
+            <div class="rpt-chart-wrap">
+              <canvas id="chartMonthly"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Second charts row -->
+        <div class="rpt-charts-row">
+          <!-- Horizontal Bar: Top Venues -->
+          <div class="rpt-chart-card">
+            <div class="rpt-chart-title">
+              <i class="fa-solid fa-location-dot"></i> Top Event Venues
+            </div>
+            <div class="rpt-chart-wrap">
+              <canvas id="chartVenues"></canvas>
+            </div>
+          </div>
+
+          <!-- Bar: Member Activity -->
+          <div class="rpt-chart-card">
+            <div class="rpt-chart-title">
+              <i class="fa-solid fa-users"></i> Member Activity
+            </div>
+            <div class="rpt-chart-wrap">
+              <canvas id="chartMembers"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Decisions Table -->
+        <div class="rpt-table-card">
+          <div class="rpt-chart-title" style="margin-bottom:.85rem">
+            <i class="fa-solid fa-clock-rotate-left"></i> Recent Admin Decisions
+          </div>
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Event Title</th>
+                  <th>Submitted By</th>
+                  <th>Event Date</th>
+                  <th>Decision</th>
+                </tr>
+              </thead>
+              <tbody id="rptRecentBody">
+                <tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--muted)">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ═════ MEMBERS (admin) ═════ -->
+      <section class="tab hidden" id="tab-members">
+        <div class="tab-top">
+          <div class="section-lbl" style="margin:0">Members &amp; Admins</div>
+          <div class="member-search-wrap">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="memberSearch" placeholder="Search members…" oninput="renderMembers()"/>
+          </div>
+        </div>
+        <div class="mem-grid" id="memGrid"></div>
+      </section>
+
+      <!-- ═════ SETTINGS (admin) ═════ -->
+      <section class="tab hidden" id="tab-settings">
+        <div class="settings-layout">
+          <div class="settings-box">
+            <div class="set-group-lbl"><i class="fa-solid fa-building"></i> General</div>
+            <div class="set-row">
+              <label>Club Name</label>
+              <input type="text" id="setClubName" value="ClubHub Organization"/>
+            </div>
+            <div class="set-row">
+              <label>Contact Email</label>
+              <input type="text" id="setEmail" value="contact@clubhub.com"/>
+            </div>
+            <div class="set-row">
+              <label>Club Description</label>
+              <input type="text" id="setDesc" value="A community for everyone."/>
+            </div>
+            <div class="set-row">
+              <label>Max Members</label>
+              <input type="number" id="setMaxMembers" value="100"/>
+            </div>
+            <div class="set-group-lbl" style="margin-top:1.2rem"><i class="fa-solid fa-users-gear"></i> Membership</div>
+            <div class="set-row">
+              <label>Allow New Registrations</label>
+              <label class="toggle"><input type="checkbox" id="setReg" checked/><span class="tog"></span></label>
+            </div>
+            <div class="set-row">
+              <label>Require Admin Approval</label>
+              <label class="toggle"><input type="checkbox" id="setApproval" checked/><span class="tog"></span></label>
+            </div>
+            <div class="set-group-lbl" style="margin-top:1.2rem"><i class="fa-solid fa-bell"></i> Notifications</div>
+            <div class="set-row">
+              <label>Email Notifications</label>
+              <label class="toggle"><input type="checkbox" id="setEmailNotif" checked/><span class="tog"></span></label>
+            </div>
+            <div class="set-row">
+              <label>Request Alerts</label>
+              <label class="toggle"><input type="checkbox" id="setReqAlerts" checked/><span class="tog"></span></label>
+            </div>
+            <div class="set-row">
+              <label>Member Join Alerts</label>
+              <label class="toggle"><input type="checkbox" id="setJoinAlerts"/><span class="tog"></span></label>
+            </div>
+            <div class="set-group-lbl" style="margin-top:1.2rem"><i class="fa-solid fa-palette"></i> Appearance</div>
+            <div class="set-row">
+              <label>Theme</label>
+              <div class="theme-toggle-row">
+                <button class="theme-btn" onclick="setTheme('dark')"><i class="fa-solid fa-moon"></i> Dark</button>
+                <button class="theme-btn" onclick="setTheme('light')"><i class="fa-solid fa-sun"></i> Light</button>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:1rem;margin-top:1rem">
+              <button class="btn-primary" style="width:auto;padding:.55rem 1.5rem" onclick="saveSettings()">
+                <i class="fa-solid fa-floppy-disk"></i> Save Changes
+              </button>
+              <span id="saveMsg" class="save-msg hidden">✓ Saved!</span>
+            </div>
+          </div>
+          <div class="settings-box danger-box">
+            <div class="set-group-lbl" style="color:var(--red)"><i class="fa-solid fa-triangle-exclamation"></i> Danger Zone</div>
+            <p style="font-size:.82rem;color:var(--muted);margin-bottom:.8rem">These actions cannot be undone.</p>
+            <div style="display:flex;gap:.6rem;flex-wrap:wrap">
+              <button class="btn-danger" onclick="showToast('Feature requires database connection.')">
+                <i class="fa-solid fa-trash"></i> Clear All Requests
+              </button>
+              <button class="btn-danger" onclick="showToast('Feature requires database connection.')">
+                <i class="fa-solid fa-users-slash"></i> Remove All Members
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app-shell -->
+
+<!-- MODAL: Submit Request -->
+<div id="eventModal" class="modal-overlay hidden" onclick="bgClose(event,'eventModal')">
+  <div class="modal-box">
+    <div class="modal-head">
+      <span><i class="fa-regular fa-calendar-plus"></i> Submit Event Request</span>
+      <button class="mx" onclick="closeModal('eventModal')">✕</button>
+    </div>
+    <label class="field-label">Event Title <span class="req-star">*</span></label>
+    <input class="field-input" type="text" id="evTitle" placeholder="e.g. Club Anniversary Night"/>
+    <label class="field-label">Event Date <span class="req-star">*</span></label>
+    <input class="field-input" type="date" id="evDate"/>
+    <label class="field-label">Location / Where <span class="req-star">*</span></label>
+    <input class="field-input" type="text" id="evVenue" placeholder="e.g. Clubhouse Hall A"/>
+    <label class="field-label">Description</label>
+    <textarea class="field-input field-ta" id="evDesc" placeholder="What is this event about? Expected attendees, purpose…"></textarea>
+    <div id="evError" class="form-error"><i class="fa-solid fa-circle-exclamation"></i> Please fill in all required fields.</div>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="closeModal('eventModal')">Cancel</button>
+      <button class="btn-primary" onclick="submitEventRequest()"><i class="fa-solid fa-paper-plane"></i> Submit</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Admin Review -->
+<div id="reviewModal" class="modal-overlay hidden" onclick="bgClose(event,'reviewModal')">
+  <div class="modal-box modal-wide">
+    <div class="modal-head">
+      <span><i class="fa-solid fa-clipboard-check"></i> Review Request</span>
+      <button class="mx" onclick="closeModal('reviewModal')">✕</button>
+    </div>
+    <div class="review-detail-card" id="reviewDetails"></div>
+    <label class="field-label" style="margin-top:.6rem">
+      <i class="fa-solid fa-comment"></i> Admin Comment
+      <span class="req-hint">(required for Revision)</span>
+    </label>
+    <textarea class="field-input field-ta" id="reviewComment" placeholder="Leave a message for the member…"></textarea>
+    <div class="review-actions">
+      <button class="btn-approve" onclick="adminDecision('approved')"><i class="fa-solid fa-check"></i> Approve</button>
+      <button class="btn-revision" onclick="adminDecision('revision')"><i class="fa-solid fa-rotate-left"></i> Request Revision</button>
+      <button class="btn-reject" onclick="adminDecision('rejected')"><i class="fa-solid fa-xmark"></i> Reject</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Member View -->
+<div id="viewModal" class="modal-overlay hidden" onclick="bgClose(event,'viewModal')">
+  <div class="modal-box modal-wide">
+    <div class="modal-head">
+      <span><i class="fa-solid fa-file-lines"></i> Request Details</span>
+      <button class="mx" onclick="closeModal('viewModal')">✕</button>
+    </div>
+    <div id="viewDetails"></div>
+  </div>
+</div>
+
+<!-- MODAL: Member Edit -->
+<div id="editModal" class="modal-overlay hidden" onclick="bgClose(event,'editModal')">
+  <div class="modal-box">
+    <div class="modal-head">
+      <span><i class="fa-solid fa-pen-to-square"></i> Edit &amp; Resubmit Request</span>
+      <button class="mx" onclick="closeModal('editModal')">✕</button>
+    </div>
+    <input type="hidden" id="editReqId"/>
+    <div id="editCommentBox" class="admin-comment-box" style="display:none"></div>
+    <label class="field-label">Event Title <span class="req-star">*</span></label>
+    <input class="field-input" type="text" id="editTitle" placeholder="e.g. Club Anniversary Night"/>
+    <label class="field-label">Event Date <span class="req-star">*</span></label>
+    <input class="field-input" type="date" id="editDate"/>
+    <label class="field-label">Location / Where <span class="req-star">*</span></label>
+    <input class="field-input" type="text" id="editVenue" placeholder="e.g. Clubhouse Hall A"/>
+    <label class="field-label">Description</label>
+    <textarea class="field-input field-ta" id="editDesc" placeholder="What is this event about?"></textarea>
+    <div id="editError" class="form-error">
+      <i class="fa-solid fa-circle-exclamation"></i> Please fill in all required fields.
+    </div>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="closeModal('editModal')">Cancel</button>
+      <button class="btn-primary" onclick="submitEditRequest()"><i class="fa-solid fa-paper-plane"></i> Resubmit</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Admin Add Calendar Event -->
+<div id="calModal" class="modal-overlay hidden" onclick="bgClose(event,'calModal')">
+  <div class="modal-box">
+    <div class="modal-head">
+      <span><i class="fa-regular fa-calendar-plus"></i> Add Event</span>
+      <button class="mx" onclick="closeModal('calModal')">✕</button>
+    </div>
+    <label class="field-label">Event Title <span class="req-star">*</span></label>
+    <input class="field-input" type="text" id="calEvTitle" placeholder="Event name"/>
+    <label class="field-label">Date</label>
+    <input class="field-input" type="date" id="calEvDate"/>
+    <label class="field-label">Venue</label>
+    <input class="field-input" type="text" id="calEvVenue" placeholder="Location"/>
+    <label class="field-label">Time</label>
+    <input class="field-input" type="time" id="calEvTime"/>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="closeModal('calModal')">Cancel</button>
+      <button class="btn-primary" onclick="addCalEvent()"><i class="fa-solid fa-plus"></i> Add Event</button>
+    </div>
+  </div>
+</div>
+
+<div id="toastContainer"></div>
+<script src="script.js"></script>
+</body>
+</html>
