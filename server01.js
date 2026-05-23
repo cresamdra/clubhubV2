@@ -20,7 +20,6 @@ if (!fs.existsSync("./data")) {
 const db = new sqlite3("./data/clubhub.db");
 console.log("Connected to SQLite database.");
 
-// Create tables if they don't exist
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id        INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -219,7 +218,7 @@ app.delete("/api/requests/:id", (req, res) => {
   }
 });
 
-// ── GET REPORTS (approved requests) ───────────────────────────────────────────
+// ── GET REPORTS ────────────────────────────────────────────────────────────────
 app.get("/api/reports", (req, res) => {
   try {
     const rows = db.prepare(`
@@ -274,27 +273,19 @@ app.delete("/api/calendar/:id", (req, res) => {
   }
 });
 
-// TEMP: promote user to admin — DELETE AFTER USE
+// ── TEMP: check users ──────────────────────────────────────────────────────────
+app.get("/api/check-users", (req, res) => {
+  const users = db.prepare("SELECT id, firstName, lastName, email, role FROM users").all();
+  res.json({ users });
+});
+
+// ── TEMP: promote user to admin ────────────────────────────────────────────────
 app.get("/api/make-admin/:email", (req, res) => {
   const result = db.prepare("UPDATE users SET role='admin' WHERE email=?").run(req.params.email);
   res.json({ message: "Done!", changes: result.changes });
 });
 
-// TEMP: check users
-app.get("/api/check-users", (req, res) => {
-  const users = db.prepare("SELECT id, firstName, lastName, email, role FROM users").all();
-  res.json({ users });
-});
 // ─────────────────────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
-
-cat >> server01.js << 'EOF'
-
-// TEMP: check users
-app.get("/api/check-users", (req, res) => {
-  const users = db.prepare("SELECT id, firstName, lastName, email, role FROM users").all();
-  res.json({ users });
-});
-EOF
