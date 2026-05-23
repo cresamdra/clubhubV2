@@ -111,7 +111,7 @@ function handleLogin() {
   if (!email || !pass) {
     showFormError("loginError", "loginErrMsg", "Please enter your email and password."); return;
   }
-  fetch("http://localhost:3000/api/login", {
+  fetch("/api/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username: email, password: pass })
@@ -150,7 +150,7 @@ function handleRegister() {
   if (pass !== confirm) {
     showFormError("regError", "regErrMsg", "Passwords do not match."); return;
   }
-  fetch("http://localhost:3000/api/register", {
+  fetch("/api/register", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ firstName: first, lastName: last, email, password: pass })
@@ -160,7 +160,7 @@ function handleRegister() {
     if (data.error) { showFormError("regError", "regErrMsg", data.error); return; }
     hideFormError("regError");
     showToast(`Welcome, ${first}! Signing you in...`);
-    fetch("http://localhost:3000/api/login", {
+    fetch("/api/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username: email, password: pass })
@@ -231,7 +231,6 @@ function handleLogout() {
   _knownRequests = null;
   _isPolling     = false;
 
-  // Destroy charts so they don't linger
   [_chartStatus, _chartMonthly, _chartVenues, _chartMembers].forEach(c => { if (c) c.destroy(); });
   _chartStatus = _chartMonthly = _chartVenues = _chartMembers = null;
 
@@ -271,7 +270,7 @@ function doPoll() {
   if (!currentUser || _knownRequests === null || _isPolling) return;
   _isPolling = true;
 
-  fetch("http://localhost:3000/api/requests")
+  fetch("/api/requests")
     .then(r => r.json())
     .then(data => {
       const fresh   = data.requests || [];
@@ -432,7 +431,7 @@ document.addEventListener("click", function(e) {
 //  API: REQUESTS
 // ─────────────────────────────────────────
 function fetchRequests() {
-  return fetch("http://localhost:3000/api/requests")
+  return fetch("/api/requests")
     .then(r => r.json())
     .then(data => {
       _requests = data.requests || [];
@@ -516,7 +515,7 @@ function submitEventRequest() {
   if (!title || !date || !venue) { $("evError").style.display = "flex"; return; }
   $("evError").style.display = "none";
 
-  fetch("http://localhost:3000/api/requests", {
+  fetch("/api/requests", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ title, date, venue, desc, submittedBy: currentUser.id })
@@ -585,7 +584,7 @@ function adminDecision(status) {
     showToast("Please add a comment when requesting revision.", true); return;
   }
 
-  fetch(`http://localhost:3000/api/requests/${reviewingId}`, {
+  fetch(`/api/requests/${reviewingId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ status, comment })
@@ -604,7 +603,7 @@ function adminDecision(status) {
 
 function adminDeleteRequest(id) {
   if (!confirm("Delete this request permanently?")) return;
-  fetch(`http://localhost:3000/api/requests/${id}`, { method: "DELETE" })
+  fetch(`/api/requests/${id}`, { method: "DELETE" })
     .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
     .then(data => {
       if (data.error) { showToast(data.error, true); return; }
@@ -684,7 +683,7 @@ function submitEditRequest() {
   }
   $("editError").style.display = "none";
 
-  fetch(`http://localhost:3000/api/requests/${id}`, {
+  fetch(`/api/requests/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ title, date, venue, desc, status: "pending", comment: "" })
@@ -758,7 +757,7 @@ function updateDashboard() {
 //  CALENDAR
 // ─────────────────────────────────────────
 function fetchCalendar() {
-  fetch("http://localhost:3000/api/calendar")
+  fetch("/api/calendar")
     .then(r => r.json())
     .then(data => { _calEvents = data.events || []; renderCalendar(_calEvents); })
     .catch(() => {
@@ -895,7 +894,7 @@ function addCalEvent() {
 
   if (!title || !date) { showToast("Title and date are required.", true); return; }
 
-  fetch("http://localhost:3000/api/calendar", {
+  fetch("/api/calendar", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ title, date, venue, time })
@@ -914,7 +913,7 @@ function addCalEvent() {
 //  REPORTS
 // ─────────────────────────────────────────
 function fetchReports() {
-  fetch("http://localhost:3000/api/reports")
+  fetch("/api/reports")
     .then(r => r.json())
     .then(data => renderReports(data))
     .catch(err => {
@@ -928,7 +927,6 @@ function renderReports(data) {
   const textColor   = isDark ? "#8892b0" : "#4a4f6a";
   const gridColor   = isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)";
 
-  // ── Summary stat cards ──
   const statusMap = {};
   (data.statusBreakdown || []).forEach(s => { statusMap[s.status] = s.count; });
   const total    = Object.values(statusMap).reduce((a,b) => a+b, 0);
@@ -943,7 +941,6 @@ function renderReports(data) {
   $("rptPending").textContent  = pending;
   $("rptRate").textContent     = rate + "%";
 
-  // ── Helper: destroy old chart if exists ──
   const makeChart = (ref, id, type, chartData, options = {}) => {
     if (ref) ref.destroy();
     const ctx = document.getElementById(id);
@@ -957,7 +954,6 @@ function renderReports(data) {
     plugins: { legend: { labels: { color: textColor, font: { size: 11 } } } }
   };
 
-  // ── 1. Donut: Status Breakdown ──
   const statusLabels = (data.statusBreakdown || []).map(s => cap(s.status));
   const statusCounts = (data.statusBreakdown || []).map(s => s.count);
   const statusColors = (data.statusBreakdown || []).map(s =>
@@ -985,7 +981,6 @@ function renderReports(data) {
     }
   });
 
-  // ── 2. Bar: Requests Per Month ──
   const monthLabels = (data.requestsPerMonth || []).map(m => {
     const [y, mo] = m.month.split("-");
     const names = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -1013,7 +1008,6 @@ function renderReports(data) {
     }
   });
 
-  // ── 3. Horizontal Bar: Top Venues ──
   const venueLabels = (data.topVenues || []).map(v => v.venue.length > 18 ? v.venue.slice(0,18)+"…" : v.venue);
   const venueCounts = (data.topVenues || []).map(v => v.count);
 
@@ -1039,7 +1033,6 @@ function renderReports(data) {
     }
   });
 
-  // ── 4. Bar: Member Activity ──
   const memberLabels = (data.memberActivity || []).map(m => {
     const parts = m.name.split(" ");
     return parts[0] + (parts[1] ? " " + parts[1][0] + "." : "");
@@ -1066,7 +1059,6 @@ function renderReports(data) {
     }
   });
 
-  // ── 5. Recent Decisions Table ──
   const tbody = $("rptRecentBody");
   const decisions = data.recentDecisions || [];
   if (!decisions.length) {
@@ -1088,7 +1080,7 @@ function renderReports(data) {
 //  MEMBERS (Admin)
 // ─────────────────────────────────────────
 function fetchMembers() {
-  fetch("http://localhost:3000/api/members")
+  fetch("/api/members")
     .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
     .then(data => { _members = data.members || []; renderMembers(); updateDashboard(); })
     .catch(err => { console.error("fetchMembers:", err); showToast("Could not load members.", true); });
@@ -1133,7 +1125,7 @@ function renderMembers() {
 }
 
 function changeRole(id, newRole) {
-  fetch(`http://localhost:3000/api/members/${id}`, {
+  fetch(`/api/members/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ role: newRole })
@@ -1144,7 +1136,7 @@ function changeRole(id, newRole) {
 }
 
 function changeMemberStatus(id, newStatus) {
-  fetch(`http://localhost:3000/api/members/${id}`, {
+  fetch(`/api/members/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ status: newStatus })
