@@ -273,18 +273,6 @@ app.delete("/api/calendar/:id", (req, res) => {
   }
 });
 
-// ── TEMP: check users ──────────────────────────────────────────────────────────
-app.get("/api/check-users", (req, res) => {
-  const users = db.prepare("SELECT id, firstName, lastName, email, role FROM users").all();
-  res.json({ users });
-});
-
-// ── TEMP: promote user to admin ────────────────────────────────────────────────
-app.get("/api/make-admin/:email", (req, res) => {
-  const result = db.prepare("UPDATE users SET role='admin' WHERE email=?").run(req.params.email);
-  res.json({ message: "Done!", changes: result.changes });
-});
-
 // ─────────────────────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
