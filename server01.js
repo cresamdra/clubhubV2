@@ -12,11 +12,11 @@ app.use(bodyParser.json());
 app.use(cors());
 app.use(express.static("frontend"));
 
-if (!fs.existsSync("./data")) {
-  fs.mkdirSync("./data");
+if (!fs.existsSync("/app/data")) {
+  fs.mkdirSync("/app/data");
 }
 
-const db = new sqlite3("./data/clubhub.db");
+const db = new sqlite3("/app/data/clubhub.db");
 console.log("Connected to SQLite database.");
 
 db.exec(`
