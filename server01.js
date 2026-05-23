@@ -274,6 +274,11 @@ app.delete("/api/calendar/:id", (req, res) => {
   }
 });
 
+// TEMP: promote user to admin — DELETE AFTER USE
+app.get("/api/make-admin/:email", (req, res) => {
+  const result = db.prepare("UPDATE users SET role='admin' WHERE email=?").run(req.params.email);
+  res.json({ message: "Done!", changes: result.changes });
+});
 // ─────────────────────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
