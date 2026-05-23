@@ -188,16 +188,54 @@ app.delete("/api/requests/:id", (req, res) => {
   }
 });
 
+// ── GET REPORTS (full analytics data for frontend charts) ─────────────────────
 app.get("/api/reports", (req, res) => {
   try {
-    const rows = db.prepare(`
-      SELECT r.*, u.firstName, u.lastName
+    // Status breakdown
+    const statusBreakdown = db.prepare(`
+      SELECT status, COUNT(*) as count FROM requests GROUP BY status
+    `).all();
+
+    // Requests per month
+    const requestsPerMonth = db.prepare(`
+      SELECT strftime('%Y-%m', date) as month, COUNT(*) as count
+      FROM requests
+      GROUP BY month
+      ORDER BY month ASC
+    `).all();
+
+    // Top venues
+    const topVenues = db.prepare(`
+      SELECT venue, COUNT(*) as count
+      FROM requests
+      WHERE venue != ''
+      GROUP BY venue
+      ORDER BY count DESC
+      LIMIT 5
+    `).all();
+
+    // Member activity
+    const memberActivity = db.prepare(`
+      SELECT u.firstName || ' ' || u.lastName as name, COUNT(*) as count
       FROM requests r
       JOIN users u ON r.submittedBy = u.id
-      WHERE r.status = 'approved'
-      ORDER BY r.ts DESC
+      GROUP BY r.submittedBy
+      ORDER BY count DESC
+      LIMIT 5
     `).all();
-    res.json({ reports: rows });
+
+    // Recent decisions (approved or rejected)
+    const recentDecisions = db.prepare(`
+      SELECT r.title, r.date, r.status,
+             u.firstName || ' ' || u.lastName as submittedBy
+      FROM requests r
+      JOIN users u ON r.submittedBy = u.id
+      WHERE r.status IN ('approved', 'rejected')
+      ORDER BY r.ts DESC
+      LIMIT 10
+    `).all();
+
+    res.json({ statusBreakdown, requestsPerMonth, topVenues, memberActivity, recentDecisions });
   } catch (err) {
     res.json({ error: "Failed to fetch reports." });
   }
