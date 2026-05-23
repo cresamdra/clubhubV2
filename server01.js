@@ -6,18 +6,17 @@ const cors = require("cors");
 const fs = require("fs");
 
 const app = express();
-const PORT = process.env.PORT || 3000; // FIX: use Render's port
+const PORT = process.env.PORT || 3000;
 
 app.use(bodyParser.json());
 app.use(cors());
 app.use(express.static("frontend"));
 
-// FIX: ensure /data directory exists for Render persistent disk
+// Ensure /data directory exists for persistent disk
 if (!fs.existsSync("./data")) {
   fs.mkdirSync("./data");
 }
 
-// FIX: point DB to ./data/ so it survives on Render's persistent disk
 const db = new sqlite3("./data/clubhub.db");
 console.log("Connected to SQLite database.");
 
@@ -101,15 +100,65 @@ app.post("/api/login", (req, res) => {
   res.json({ user: row });
 });
 
+// ── GET ALL MEMBERS (admin) ───────────────────────────────────────────────────
+app.get("/api/members", (req, res) => {
+  try {
+    const rows = db.prepare(`SELECT id, firstName, lastName, email, role, status, joined FROM users ORDER BY joined DESC`).all();
+    res.json({ members: rows });
+  } catch (err) {
+    res.json({ error: "Failed to fetch members." });
+  }
+});
+
+// ── UPDATE MEMBER STATUS/ROLE (admin) ─────────────────────────────────────────
+app.patch("/api/members/:id", (req, res) => {
+  const { id } = req.params;
+  const { status, role } = req.body;
+
+  const fields = [];
+  const values = [];
+
+  if (status !== undefined) { fields.push("status = ?"); values.push(status); }
+  if (role   !== undefined) { fields.push("role = ?");   values.push(role);   }
+
+  if (fields.length === 0) return res.json({ error: "Nothing to update." });
+
+  values.push(id);
+
+  try {
+    const result = db.prepare(`UPDATE users SET ${fields.join(", ")} WHERE id = ?`).run(...values);
+    if (result.changes === 0) return res.json({ error: "Member not found." });
+    res.json({ message: "Member updated!" });
+  } catch (err) {
+    res.json({ error: "Failed to update member." });
+  }
+});
+
+// ── DELETE MEMBER (admin) ──────────────────────────────────────────────────────
+app.delete("/api/members/:id", (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = db.prepare(`DELETE FROM users WHERE id = ?`).run(id);
+    if (result.changes === 0) return res.json({ error: "Member not found." });
+    res.json({ message: "Member deleted!" });
+  } catch (err) {
+    res.json({ error: "Failed to delete member." });
+  }
+});
+
 // ── GET ALL REQUESTS (with submitter name) ────────────────────────────────────
 app.get("/api/requests", (req, res) => {
-  const rows = db.prepare(`
-    SELECT r.*, u.firstName, u.lastName
-    FROM requests r
-    JOIN users u ON r.submittedBy = u.id
-    ORDER BY r.ts DESC
-  `).all();
-  res.json({ requests: rows });
+  try {
+    const rows = db.prepare(`
+      SELECT r.*, u.firstName, u.lastName
+      FROM requests r
+      JOIN users u ON r.submittedBy = u.id
+      ORDER BY r.ts DESC
+    `).all();
+    res.json({ requests: rows });
+  } catch (err) {
+    res.json({ error: "Failed to fetch requests." });
+  }
 });
 
 // ── SUBMIT NEW REQUEST (member) ───────────────────────────────────────────────
@@ -130,7 +179,7 @@ app.post("/api/requests", (req, res) => {
   }
 });
 
-// ── UPDATE REQUEST ─────────────────────────────────────────────────────────────
+// ── UPDATE REQUEST (admin) ─────────────────────────────────────────────────────
 app.patch("/api/requests/:id", (req, res) => {
   const { id } = req.params;
   const { status, comment, title, date, venue, desc } = req.body;
@@ -158,8 +207,74 @@ app.patch("/api/requests/:id", (req, res) => {
   }
 });
 
+// ── DELETE REQUEST (admin) ─────────────────────────────────────────────────────
+app.delete("/api/requests/:id", (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = db.prepare(`DELETE FROM requests WHERE id = ?`).run(id);
+    if (result.changes === 0) return res.json({ error: "Request not found." });
+    res.json({ message: "Request deleted!" });
+  } catch (err) {
+    res.json({ error: "Failed to delete request." });
+  }
+});
+
+// ── GET REPORTS (approved requests) ───────────────────────────────────────────
+app.get("/api/reports", (req, res) => {
+  try {
+    const rows = db.prepare(`
+      SELECT r.*, u.firstName, u.lastName
+      FROM requests r
+      JOIN users u ON r.submittedBy = u.id
+      WHERE r.status = 'approved'
+      ORDER BY r.ts DESC
+    `).all();
+    res.json({ reports: rows });
+  } catch (err) {
+    res.json({ error: "Failed to fetch reports." });
+  }
+});
+
+// ── GET CALENDAR EVENTS ────────────────────────────────────────────────────────
+app.get("/api/calendar", (req, res) => {
+  try {
+    const rows = db.prepare(`SELECT * FROM calendar_events ORDER BY date ASC`).all();
+    res.json({ events: rows });
+  } catch (err) {
+    res.json({ error: "Failed to fetch calendar events." });
+  }
+});
+
+// ── ADD CALENDAR EVENT ─────────────────────────────────────────────────────────
+app.post("/api/calendar", (req, res) => {
+  const { title, date, venue, time } = req.body;
+  if (!title || !date) return res.json({ error: "Title and date are required." });
+
+  const ts = Date.now();
+  try {
+    const result = db.prepare(
+      `INSERT INTO calendar_events (title, date, venue, time, status, ts)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    ).run(title, date, venue || "", time || "", "approved", ts);
+    res.json({ message: "Event added!", id: result.lastInsertRowid });
+  } catch (err) {
+    res.json({ error: "Failed to add event." });
+  }
+});
+
+// ── DELETE CALENDAR EVENT ──────────────────────────────────────────────────────
+app.delete("/api/calendar/:id", (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = db.prepare(`DELETE FROM calendar_events WHERE id = ?`).run(id);
+    if (result.changes === 0) return res.json({ error: "Event not found." });
+    res.json({ message: "Event deleted!" });
+  } catch (err) {
+    res.json({ error: "Failed to delete event." });
+  }
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
-// FIX: removed browser auto-open (xdg-open/open/start) — not needed on server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
