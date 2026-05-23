@@ -12,7 +12,6 @@ app.use(bodyParser.json());
 app.use(cors());
 app.use(express.static("frontend"));
 
-// Ensure /data directory exists for persistent disk
 if (!fs.existsSync("./data")) {
   fs.mkdirSync("./data");
 }
@@ -60,38 +59,27 @@ db.exec(`
   )
 `);
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ROUTES
-// ─────────────────────────────────────────────────────────────────────────────
-
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "frontend", "index.html"));
 });
 
-// ── REGISTER ──────────────────────────────────────────────────────────────────
 app.post("/api/register", (req, res) => {
   const { firstName, lastName, email, password } = req.body;
   if (!firstName || !lastName || !email || !password)
     return res.json({ error: "All fields are required." });
-
   const joined = new Date().toISOString().split("T")[0];
   const stmt = db.prepare(
     `INSERT INTO users (firstName, lastName, email, password, role, status, joined)
      VALUES (?, ?, ?, ?, ?, ?, ?)`
   );
-
   try {
     const result = stmt.run(firstName, lastName, email, password, "member", "active", joined);
-    res.json({
-      message: "User registered!",
-      user: { id: result.lastInsertRowid, firstName, lastName, email, role: "member" },
-    });
+    res.json({ message: "User registered!", user: { id: result.lastInsertRowid, firstName, lastName, email, role: "member" } });
   } catch (err) {
     res.json({ error: "Email already exists or invalid data." });
   }
 });
 
-// ── LOGIN ──────────────────────────────────────────────────────────────────────
 app.post("/api/login", (req, res) => {
   const { username, password } = req.body;
   const row = db.prepare(`SELECT * FROM users WHERE email = ? AND password = ?`).get(username, password);
@@ -99,7 +87,6 @@ app.post("/api/login", (req, res) => {
   res.json({ user: row });
 });
 
-// ── GET ALL MEMBERS (admin) ───────────────────────────────────────────────────
 app.get("/api/members", (req, res) => {
   try {
     const rows = db.prepare(`SELECT id, firstName, lastName, email, role, status, joined FROM users ORDER BY joined DESC`).all();
@@ -109,21 +96,15 @@ app.get("/api/members", (req, res) => {
   }
 });
 
-// ── UPDATE MEMBER STATUS/ROLE (admin) ─────────────────────────────────────────
 app.patch("/api/members/:id", (req, res) => {
   const { id } = req.params;
   const { status, role } = req.body;
-
   const fields = [];
   const values = [];
-
   if (status !== undefined) { fields.push("status = ?"); values.push(status); }
   if (role   !== undefined) { fields.push("role = ?");   values.push(role);   }
-
   if (fields.length === 0) return res.json({ error: "Nothing to update." });
-
   values.push(id);
-
   try {
     const result = db.prepare(`UPDATE users SET ${fields.join(", ")} WHERE id = ?`).run(...values);
     if (result.changes === 0) return res.json({ error: "Member not found." });
@@ -133,7 +114,6 @@ app.patch("/api/members/:id", (req, res) => {
   }
 });
 
-// ── DELETE MEMBER (admin) ──────────────────────────────────────────────────────
 app.delete("/api/members/:id", (req, res) => {
   const { id } = req.params;
   try {
@@ -145,7 +125,6 @@ app.delete("/api/members/:id", (req, res) => {
   }
 });
 
-// ── GET ALL REQUESTS (with submitter name) ────────────────────────────────────
 app.get("/api/requests", (req, res) => {
   try {
     const rows = db.prepare(`
@@ -160,12 +139,10 @@ app.get("/api/requests", (req, res) => {
   }
 });
 
-// ── SUBMIT NEW REQUEST (member) ───────────────────────────────────────────────
 app.post("/api/requests", (req, res) => {
   const { title, date, venue, desc, submittedBy } = req.body;
   if (!title || !date || !venue || !submittedBy)
     return res.json({ error: "Missing required fields." });
-
   const ts = Date.now();
   try {
     const result = db.prepare(
@@ -178,25 +155,19 @@ app.post("/api/requests", (req, res) => {
   }
 });
 
-// ── UPDATE REQUEST (admin) ─────────────────────────────────────────────────────
 app.patch("/api/requests/:id", (req, res) => {
   const { id } = req.params;
   const { status, comment, title, date, venue, desc } = req.body;
-
   const allowed = ["approved", "rejected", "revision", "pending"];
   if (!status || !allowed.includes(status))
     return res.json({ error: "Invalid status value." });
-
   const fields = ["status = ?", "comment = ?"];
   const values = [status, comment ?? ""];
-
   if (title !== undefined) { fields.push("title = ?"); values.push(title); }
   if (date  !== undefined) { fields.push("date = ?");  values.push(date);  }
   if (venue !== undefined) { fields.push("venue = ?"); values.push(venue); }
   if (desc  !== undefined) { fields.push("desc = ?");  values.push(desc);  }
-
   values.push(id);
-
   try {
     const result = db.prepare(`UPDATE requests SET ${fields.join(", ")} WHERE id = ?`).run(...values);
     if (result.changes === 0) return res.json({ error: "Request not found." });
@@ -206,7 +177,6 @@ app.patch("/api/requests/:id", (req, res) => {
   }
 });
 
-// ── DELETE REQUEST (admin) ─────────────────────────────────────────────────────
 app.delete("/api/requests/:id", (req, res) => {
   const { id } = req.params;
   try {
@@ -218,7 +188,6 @@ app.delete("/api/requests/:id", (req, res) => {
   }
 });
 
-// ── GET REPORTS ────────────────────────────────────────────────────────────────
 app.get("/api/reports", (req, res) => {
   try {
     const rows = db.prepare(`
@@ -234,7 +203,6 @@ app.get("/api/reports", (req, res) => {
   }
 });
 
-// ── GET CALENDAR EVENTS ────────────────────────────────────────────────────────
 app.get("/api/calendar", (req, res) => {
   try {
     const rows = db.prepare(`SELECT * FROM calendar_events ORDER BY date ASC`).all();
@@ -244,11 +212,9 @@ app.get("/api/calendar", (req, res) => {
   }
 });
 
-// ── ADD CALENDAR EVENT ─────────────────────────────────────────────────────────
 app.post("/api/calendar", (req, res) => {
   const { title, date, venue, time } = req.body;
   if (!title || !date) return res.json({ error: "Title and date are required." });
-
   const ts = Date.now();
   try {
     const result = db.prepare(
@@ -261,7 +227,6 @@ app.post("/api/calendar", (req, res) => {
   }
 });
 
-// ── DELETE CALENDAR EVENT ──────────────────────────────────────────────────────
 app.delete("/api/calendar/:id", (req, res) => {
   const { id } = req.params;
   try {
@@ -273,7 +238,17 @@ app.delete("/api/calendar/:id", (req, res) => {
   }
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
+// TEMP
+app.get("/api/check-users", (req, res) => {
+  const users = db.prepare("SELECT id, firstName, lastName, email, role FROM users").all();
+  res.json({ users });
+});
+
+app.get("/api/make-admin/:email", (req, res) => {
+  const result = db.prepare("UPDATE users SET role='admin' WHERE email=?").run(req.params.email);
+  res.json({ message: "Done!", changes: result.changes });
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
